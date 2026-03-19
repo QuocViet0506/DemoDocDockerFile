@@ -31,4 +31,4 @@ jobs:
           context: .              # Thư mục chứa Dockerfile
           file: ./Dockerfile      # Dockerfile gốc của dự án Spring Boot
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}halequocviet/halequocviet-app:latest
+          tags: halequocviet/halequocviet-app:latest
