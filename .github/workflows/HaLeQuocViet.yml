@@ -1,0 +1,34 @@
+name: Tự động Deploy lên Docker Hub
+
+on:
+  push:
+    branches: [ "main" ] # Chỉ chạy khi có code đẩy lên nhánh main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # Mượn máy ảo Ubuntu của Github để chạy
+
+    steps:
+      # Bước 1: Lấy code từ repo
+      - name: Checkout code từ Github
+        uses: actions/checkout@v6.0.2
+
+      # Bước 2: Đăng nhập vào Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_QUOCVIET }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      # Bước 3: Thiết lập môi trường build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Bước 4: Build và Push Image Spring Boot
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .              # Thư mục chứa Dockerfile
+          file: ./Dockerfile      # Dockerfile gốc của dự án Spring Boot
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}halequocviet/halequocviet-app:latest
