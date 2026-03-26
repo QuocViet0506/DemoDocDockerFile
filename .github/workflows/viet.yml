@@ -11,7 +11,7 @@ jobs:
     steps:
       # 1. Checkout code
       - name: Checkout code từ Github
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       # 2. Login Docker Hub
       - name: Login to Docker Hub
@@ -33,7 +33,7 @@ jobs:
           push: true
           tags: halequocviet/halequocviet-app:latest
 
-      # 5. Deploy qua webhook
+      # 5. Deploy qua webhook (GIỮ 1 cái thôi)
       - name: Triển khai lên DevOps Classroom
         run: |
           REPO="halequocviet/halequocviet-app:latest"
