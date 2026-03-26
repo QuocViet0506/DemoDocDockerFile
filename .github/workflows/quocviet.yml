@@ -2,26 +2,59 @@ name: Tự động Deploy lên Docker Hub
 
 on:
   push:
-    branches: [ "main" ] # Chỉ chạy khi có code đẩy lên nhánh main
+    branches: ["main"]
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest # Mượn máy ảo Ubuntu của Github để chạy
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Bước 1 - Checkout code từ Github
-        uses: actions/checkout@v6.0.2   # Phiên bản hợp lệ
+      - name: Checkout code từ Github
+        uses: actions/checkout@v4
 
-      - name: Bước 2 - Đăng nhập vào kho Docker Hub
-        uses: docker/login-action@v2
+      # Debug (xem có nhận secrets không)
+      - name: Debug secrets
+        run: |
+          echo "Username is set: ${{ secrets.DOCKER_QUOCVIET != '' }}"
+          echo "Password is set: ${{ secrets.DOCKER_PASSWORD != '' }}"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_QUOCVIET }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Bước 3 - Đóng gói và Đẩy Image lên Docker Hub
-        uses: docker/build-push-action@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
         with:
-          context: .              # Thư mục chứa Dockerfile
-          file: ./Dockerfile      # Dockerfile gốc của dự án Spring Boot
+          context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/halequocviet/halequocviet-app:latest
+          tags: halequocviet/halequocviet-app:latest
+
+      - name: Triển khai lên DevOps Classroom
+        run: |
+          REPO="halequocviet/halequocviet-app"
+          CONTAINER_PORT=80
+      - name: Triển khai lên DevOps Classroom
+        run: |
+          REPO="halequocviet/halequocviet-app"
+          CONTAINER_PORT=80
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${{ secrets.DEPLOY_URL }}?repo=$REPO&tag=latest&slot=7&container_port=$CONTAINER_PORT&strict_container_port=0")
+          BODY=$(echo "$RESPONSE" | sed "$d")
+          CODE=$(echo "$RESPONSE" | tail -n1)
+          echo "Webhook HTTP: $CODE"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "Deploy thất bại. Xem chi tiết trong nhóm log bên dưới."
+            echo "::group::Chi tiết webhook JSON"
+            echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
+            echo "::endgroup::"
+            exit 1
+          fi
+          echo "Deploy thành công."
+          echo "::group::Chi tiết webhook JSON"
+          echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
+          echo "::endgroup::"
+          curl -X POST "${{ secrets.DEPLOY_URL }}?repo=$REPO&tag=latest&slot=7&container_port=$CONTAINER_PORT"
