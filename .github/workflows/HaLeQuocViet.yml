@@ -11,51 +11,49 @@ jobs:
     steps:
       # 1. Checkout code
       - name: Checkout code từ Github
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v4 # Cập nhật version stable mới nhất
 
-      # 2. Debug secrets (quan trọng)
-      - name: Debug secrets
-        run: |
-          echo "Username OK: ${{ secrets.DOCKER_QUOCVIET != '' }}"
-          echo "Password OK: ${{ secrets.DOCKER_PASSWORD != '' }}"
-
-      # 3. Login Docker Hub
+      # 2. Login Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_QUOCVIET }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 4. Setup Buildx
+      # 3. Setup Buildx (Giúp build image tối ưu hơn)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 5. Build & Push Docker Image
+      # 4. Build & Push Docker Image
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
+          # Đảm bảo tên tag này khớp chính xác với repo trên Docker Hub của Việt
           tags: halequocviet/halequocviet-app:latest
 
-      # 6. Deploy webhook
+      # 5. Deploy webhook qua DevOps Classroom
       - name: Triển khai lên DevOps Classroom
         run: |
           REPO="halequocviet/halequocviet-app"
-          CONTAINER_PORT=80
-
+          CONTAINER_PORT=8080 # Việt kiểm tra lại port của Spring Boot thường là 8080 nhé
+          
+          # Gửi yêu cầu Deploy qua Webhook
           RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${{ secrets.DEPLOY_URL }}?repo=$REPO&tag=latest&slot=7&container_port=$CONTAINER_PORT&strict_container_port=0")
 
-          BODY=$(echo "$RESPONSE" | sed "$d")
+          # Tách Body và Http Code
           CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
 
-          echo "Webhook HTTP: $CODE"
+          echo "Webhook HTTP Status: $CODE"
 
           if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
-            echo "Deploy thất bại"
-            echo "$BODY"
+            echo "--- DEPLOY THẤT BẠI ---"
+            echo "Chi tiết lỗi: $BODY"
             exit 1
           fi
 
-          echo "Deploy thành công"
+          echo "--- DEPLOY THÀNH CÔNG ---"
+          echo "Dự án của Việt đã được đẩy lên Slot 7 thành công!"
